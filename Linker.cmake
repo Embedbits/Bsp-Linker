@@ -1,7 +1,22 @@
+#============================ Build configuration =============================#
+
+# Configure core type
+set(CMAKE_C_FLAGS      "${CMAKE_C_FLAGS} ${MCPU_CORTEX_M33}")
+set(CMAKE_CXX_FLAGS    "${CMAKE_CXX_FLAGS} ${MCPU_CORTEX_M33}")
+
+# Configure Floating-Point unit
+set(CMAKE_C_FLAGS      "${CMAKE_C_FLAGS} ${MFPU_FPV4_SP_D16}")
+set(CMAKE_CXX_FLAGS    "${CMAKE_CXX_FLAGS} ${MFPU_FPV4_SP_D16}")
+
+# Configure FPU
+set(CMAKE_C_FLAGS      "${CMAKE_C_FLAGS} ${FLOAT_ABI_HARDWARE}")
+set(CMAKE_CXX_FLAGS    "${CMAKE_CXX_FLAGS} ${FLOAT_ABI_HARDWARE}")
+
+#============================== Constant values ===============================#
+
 # Include current directory for provide headers include
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-#============================== Constant values ===============================#
 # Path to the folder with linker files
 set(LINKER_FILES_PATH "${CMAKE_CURRENT_LIST_DIR}")
 
