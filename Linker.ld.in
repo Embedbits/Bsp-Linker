@@ -43,10 +43,6 @@ _ram_start  = ORIGIN(RAM);
 _ram_length = LENGTH(RAM);
 _ram_end    = ORIGIN(RAM) + LENGTH(RAM);
 
-_ram4_start  = ORIGIN(RAM4);
-_ram4_length = LENGTH(RAM4);
-_ram4_end    = ORIGIN(RAM4) + LENGTH(RAM4);
-
 _flash_start  = ORIGIN(FLASH);
 _flash_length = LENGTH(FLASH);
 _flash_end    = ORIGIN(FLASH) + LENGTH(FLASH);
