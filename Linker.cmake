@@ -124,9 +124,9 @@ if((MCU_ID STREQUAL "523") OR
 elseif((MCU_ID STREQUAL "5F4") OR 
        (MCU_ID STREQUAL "5F5") OR
        (MCU_ID STREQUAL "5E4") OR 
-       (MCU_ID STREQUAL "5E5") OR
+       (MCU_ID STREQUAL "5E5")    )
        
-    set(HIGH_CYCLE_FLASH "48K")
+    set(HIGH_CYCLE_FLASH "96K")
     
 else()
 
