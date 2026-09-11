@@ -26,13 +26,29 @@ set(LINKER_FILE_NAME "Linker.ld")
 
 message(STATUS "MCU target: ${TARGET_MCU_FULL_NAME}")
 
-# Generic extraction of two least significant digits from STM32 MCU name
+# Generic extraction of the subfamily identifier (three chars right after the
+# one-letter STM32 family code) from the STM32 MCU name. Works unchanged for
+# both the generic placeholder form (e.g. STM32H503xH) and a full order code
+# (e.g. STM32H503RBT6) - the subfamily code always sits in that position for
+# either form.
 string(REGEX MATCH "STM32.([0-9A-Z][0-9A-Z][0-9A-Z])" _ ${TARGET_MCU_FULL_NAME})
 set(MCU_ID "${CMAKE_MATCH_1}")
 message(STATUS "MCU_ID: ${MCU_ID}")
 
-# Extraction of FLASH identification
-string(REGEX MATCH "x([0-9A-J])$" _ ${TARGET_MCU_FULL_NAME})
+# Extraction of FLASH identification.
+#
+# Generic placeholder form (STM32H503xH): the flash-size letter is the char
+# right after the literal "x" placeholder.
+# Full order code form (STM32H503RBT6): the flash-size letter is the char
+# right after the real pin-count/package letter ("R" here).
+#
+# Both forms put the flash-size letter one character after the subfamily
+# code, so a single regex that treats that in-between character as a
+# wildcard (instead of requiring the literal "x") covers both - it no
+# longer needs an end-of-string anchor either, since the full order code has
+# more characters (package letter, temperature grade, ...) following the
+# flash-size letter.
+string(REGEX MATCH "STM32.[0-9A-Z][0-9A-Z][0-9A-Z].([0-9A-K])" _ ${TARGET_MCU_FULL_NAME})
 set(MCU_FLASH_CODE "${CMAKE_MATCH_1}")
 message(STATUS "MCU FLASH code: ${MCU_FLASH_CODE}")
 
