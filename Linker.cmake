@@ -9,8 +9,8 @@ set(CMAKE_C_FLAGS      "${CMAKE_C_FLAGS} ${MFPU_FPV4_SP_D16}")
 set(CMAKE_CXX_FLAGS    "${CMAKE_CXX_FLAGS} ${MFPU_FPV4_SP_D16}")
 
 # Configure FPU
-set(CMAKE_C_FLAGS      "${CMAKE_C_FLAGS} ${FLOAT_ABI_HARDWARE}")
-set(CMAKE_CXX_FLAGS    "${CMAKE_CXX_FLAGS} ${FLOAT_ABI_HARDWARE}")
+set(CMAKE_C_FLAGS      "${CMAKE_C_FLAGS} ${MFLOAT_ABI_HARDWARE}")
+set(CMAKE_CXX_FLAGS    "${CMAKE_CXX_FLAGS} ${MFLOAT_ABI_HARDWARE}")
 
 #============================== Constant values ===============================#
 
