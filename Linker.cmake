@@ -127,6 +127,11 @@ else()
 endif()
 
 # Decode high-cycle write flash size.
+# The high-cycle data flash (EDATA) window of the device consists of the windows
+# of both flash banks one after another (the bank 2 window follows the bank 1
+# window). A sector holds 6 KB of data and a bank has 8 sectors (16 sectors on
+# the H5E / H5F lines): 2 * 8 * 6K = 96K, 2 * 16 * 6K = 192K (ST CMSIS
+# FLASH_EDATA_SIZE).
 if((MCU_ID STREQUAL "523") OR
    (MCU_ID STREQUAL "533") OR
    (MCU_ID STREQUAL "543") OR 
@@ -135,14 +140,14 @@ if((MCU_ID STREQUAL "523") OR
    (MCU_ID STREQUAL "563") OR
    (MCU_ID STREQUAL "573")    )
    
-    set(HIGH_CYCLE_FLASH "48K")
+    set(HIGH_CYCLE_FLASH "96K")
     
 elseif((MCU_ID STREQUAL "5F4") OR 
        (MCU_ID STREQUAL "5F5") OR
        (MCU_ID STREQUAL "5E4") OR 
        (MCU_ID STREQUAL "5E5")    )
        
-    set(HIGH_CYCLE_FLASH "96K")
+    set(HIGH_CYCLE_FLASH "192K")
     
 else()
 
@@ -150,7 +155,31 @@ else()
     
 endif()
 
-message(STATUS "RAM: ${RAM_SIZE}, FLASH: ${FLASH_SIZE}")
+# Maximal number of the high-cycle data sectors of one flash bank (width of the
+# EDATA_STRT field of the option bytes: 3 bits, 4 bits on the H5E / H5F lines).
+if(HIGH_CYCLE_FLASH STREQUAL "96K")
+    set(HIGH_CYCLE_BANK_SECTORS "8")
+elseif(HIGH_CYCLE_FLASH STREQUAL "192K")
+    set(HIGH_CYCLE_BANK_SECTORS "16")
+else()
+    set(HIGH_CYCLE_BANK_SECTORS "0")
+endif()
+
+# Number of the 8 KB sectors at the end of the flash taken by the high-cycle
+# data area (EDATA option bytes of the last flash bank). The sectors are not
+# available to the code and to the USER_DATA region.
+if(NOT DEFINED HIGH_CYCLE_SECTORS)
+    set(HIGH_CYCLE_SECTORS "0")
+    message(STATUS "HIGH_CYCLE_SECTORS is not defined. Using default value.")
+elseif(NOT HIGH_CYCLE_SECTORS MATCHES "^[0-9]+$")
+    message(FATAL_ERROR "HIGH_CYCLE_SECTORS must be a number.")
+elseif(HIGH_CYCLE_SECTORS GREATER HIGH_CYCLE_BANK_SECTORS)
+    message(FATAL_ERROR "HIGH_CYCLE_SECTORS (${HIGH_CYCLE_SECTORS}) is greater than the number of high-cycle data sectors of one bank (${HIGH_CYCLE_BANK_SECTORS}) of ${TARGET_MCU_FULL_NAME}.")
+endif()
+
+math(EXPR HIGH_CYCLE_RESERVED "${HIGH_CYCLE_SECTORS} * 8192")
+
+message(STATUS "RAM: ${RAM_SIZE}, FLASH: ${FLASH_SIZE}, HIGH_CYCLE: ${HIGH_CYCLE_FLASH}, reserved sectors: ${HIGH_CYCLE_SECTORS}")
 
 
 if(NOT DEFINED USER_DATA_SIZE)
@@ -162,6 +191,13 @@ else()
     if(NOT USER_DATA_SIZE MATCHES "^[0-9]+$")
         message(FATAL_ERROR "USER_DATA_SIZE must be a number.")
     endif()
+endif()
+
+# The USER_DATA region is erased by sectors (8 KB), its start has to be aligned
+# to a sector to be usable by the Flash module.
+math(EXPR USER_DATA_SECTOR_REMAINDER "${USER_DATA_SIZE} % 8192")
+if(NOT USER_DATA_SECTOR_REMAINDER EQUAL 0)
+    message(WARNING "USER_DATA_SIZE (${USER_DATA_SIZE}) is not a multiple of the 8 KB flash sector, the USER_DATA region can not be erased by the Flash module.")
 endif()
 
 

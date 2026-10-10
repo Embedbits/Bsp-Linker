@@ -104,6 +104,23 @@ These symbols are used by the startup code to:
 3. Set the initial stack pointer
 4. Optionally relocate the vector table to RAM or CCMRAM if needed
 
+## Flash Data Regions
+
+Besides the code, the linker script defines two flash regions for the data written at run time (by the Flash MCAL module):
+
+| Region | Origin | Length | Meaning |
+|---|---|---|---|
+| `FLASH` | `0x08000000` | flash size - `HIGH_CYCLE_RESERVED` - `USER_DATA_SIZE` | Code and constants |
+| `USER_DATA` | end of `FLASH` | `USER_DATA_SIZE` | Part of the user flash for runtime data (section `.user_data_flash`, no load) |
+| `HIGH_CYCLE` | `0x09000000` | 96K / 192K / 0K | High-cycle data flash (EDATA) window of both flash banks, 0 on the lines without it |
+
+CMake variables (default 0):
+
+- `USER_DATA_SIZE` - size of the `USER_DATA` region in bytes. Shall be a multiple of the 8 KB flash sector (CMake warns otherwise): the region is erased by sectors.
+- `HIGH_CYCLE_SECTORS` - number of 8 KB sectors at the end of the flash taken by the high-cycle data area (EDATA option bytes of the last flash bank), at most the number of sectors of one bank (8, 16 on the H5E / H5F lines, 0 on the lines without the high-cycle data). `FLASH` and `USER_DATA` end before them.
+
+Symbols (bounds of the regions, in the style of `_flash_start`): `_user_data_start`, `_user_data_length`, `_user_data_end`, `_high_cycle_start`, `_high_cycle_length`, `_high_cycle_end` and `_high_cycle_sectors` (value of `HIGH_CYCLE_SECTORS`, to be compared with the option bytes at run time). `_user_data_flash_start` and `_user_data_flash_end` are different: they bound only the objects placed in the section `.user_data_flash`, not the region.
+
 ## Usage Notes
 
 - The linker script must be kept in sync with the memory configuration defined in your project settings.
