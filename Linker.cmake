@@ -52,94 +52,69 @@ string(REGEX MATCH "STM32.[0-9A-Z][0-9A-Z][0-9A-Z].([0-9A-K])" _ ${TARGET_MCU_FU
 set(MCU_FLASH_CODE "${CMAKE_MATCH_1}")
 message(STATUS "MCU FLASH code: ${MCU_FLASH_CODE}")
 
-# Decode RAM from MCU ID
+# Decode RAM and CCMRAM from MCU ID (and FLASH code for STM32G411)
 # This values has to be set according to the MCU family because ST cannot unify
-# their MCU naming convention
-if((MCU_ID STREQUAL "431") OR 
-   (MCU_ID STREQUAL "441")    )
+# their MCU naming convention.
+# Sizes follow the CMSIS device headers (SRAM1_SIZE_MAX, SRAM2_SIZE,
+# CCMSRAM_SIZE): RAM is SRAM1 + SRAM2 contiguous at 0x20000000, CCMRAM is the
+# CCM SRAM at 0x10000000. CCM SRAM is aliased right after SRAM2 as well - the
+# alias is never part of RAM, otherwise RAM and CCMRAM content would overlap.
+# STM32G411x6 / x8 / xB use the STM32G431 die (stm32g411xb.h), STM32G411xC
+# the STM32G491 die (stm32g411xc.h).
+if((MCU_ID STREQUAL "431") OR
+   (MCU_ID STREQUAL "441") OR
+   ((MCU_ID STREQUAL "411") AND
+    NOT (MCU_FLASH_CODE STREQUAL "C"))    )
 
-    set(RAM_SIZE "22k")
+    set(RAM_SIZE    "22K")
+    set(CCMRAM_SIZE "10K")
 
-elseif((MCU_ID STREQUAL "411"))
+elseif(MCU_ID STREQUAL "414")
 
-    set(RAM_SIZE "32k")
+    set(RAM_SIZE    "40K")
+    set(CCMRAM_SIZE "20K")
 
-elseif((MCU_ID STREQUAL "473") OR 
-       (MCU_ID STREQUAL "474") OR 
-       (MCU_ID STREQUAL "483") OR 
-       (MCU_ID STREQUAL "484") OR 
-       (MCU_ID STREQUAL "4A1") OR 
-       (MCU_ID STREQUAL "491")    )
+elseif((MCU_ID STREQUAL "471") OR
+       (MCU_ID STREQUAL "473") OR
+       (MCU_ID STREQUAL "474") OR
+       (MCU_ID STREQUAL "483") OR
+       (MCU_ID STREQUAL "484")    )
 
-    set(RAM_SIZE "96K")
+    set(RAM_SIZE    "96K")
+    set(CCMRAM_SIZE "32K")
 
-elseif((MCU_ID STREQUAL "471"))
+elseif((MCU_ID STREQUAL "411") OR
+       (MCU_ID STREQUAL "491") OR
+       (MCU_ID STREQUAL "4A1")    )
 
-    set(RAM_SIZE "128K")
+    set(RAM_SIZE    "96K")
+    set(CCMRAM_SIZE "16K")
 
-elseif((MCU_ID STREQUAL "411") OR 
-       (MCU_ID STREQUAL "414")    )
-
-    set(RAM_SIZE "256K")
 else()
+    set(RAM_SIZE    "0")
+    set(CCMRAM_SIZE "0")
     message(SEND_ERROR "Unknown MCU type: ${MCU_ID}")
 endif()
 
-# Decode CCMRAM from MCU ID
-# This values has to be set according to the MCU family because ST cannot unify
-# their MCU naming convention
-if((MCU_ID STREQUAL "431") OR 
-   (MCU_ID STREQUAL "441")    )
-
-    set(CCMRAM_SIZE "10k")
-
-elseif((MCU_ID STREQUAL "4A1") OR 
-       (MCU_ID STREQUAL "491")    )
-
-    set(CCMRAM_SIZE "16k")
-
-elseif((MCU_ID STREQUAL "473") OR 
-       (MCU_ID STREQUAL "474") OR 
-       (MCU_ID STREQUAL "484") OR 
-       (MCU_ID STREQUAL "483")    )
-
-    set(CCMRAM_SIZE "32k")
-
-else()
-    set(CCMRAM_SIZE "0")
-    message(STATUS "Unknown MCU type: ${MCU_ID}")
-endif()
-
-# Decode FLASH from MCU ID
-if(MCU_FLASH_CODE STREQUAL "A")
-    set(FLASH_SIZE "0")
-elseif(MCU_FLASH_CODE STREQUAL "6")
-    set(FLASH_SIZE "32K")
+# Decode FLASH from MCU ID (STM32G4 devices have 32K - 512K FLASH)
+if(MCU_FLASH_CODE STREQUAL "6")
+    set(FLASH_SIZE_KB 32)
 elseif(MCU_FLASH_CODE STREQUAL "8")
-    set(FLASH_SIZE "64K")
+    set(FLASH_SIZE_KB 64)
 elseif(MCU_FLASH_CODE STREQUAL "B")
-    set(FLASH_SIZE "128K")
+    set(FLASH_SIZE_KB 128)
 elseif(MCU_FLASH_CODE STREQUAL "C")
-    set(FLASH_SIZE "256K")
-elseif(MCU_FLASH_CODE STREQUAL "D")
-    set(FLASH_SIZE "384K")
+    set(FLASH_SIZE_KB 256)
 elseif(MCU_FLASH_CODE STREQUAL "E")
-    set(FLASH_SIZE "512K")
-elseif(MCU_FLASH_CODE STREQUAL "F")
-    set(FLASH_SIZE "768K")
-elseif(MCU_FLASH_CODE STREQUAL "G")
-    set(FLASH_SIZE "1024K")
-elseif(MCU_FLASH_CODE STREQUAL "H")
-    set(FLASH_SIZE "1536K")
-elseif(MCU_FLASH_CODE STREQUAL "I")
-    set(FLASH_SIZE "2048K")
-elseif(MCU_FLASH_CODE STREQUAL "J")
-    set(FLASH_SIZE "4096K")
+    set(FLASH_SIZE_KB 512)
 else()
+    set(FLASH_SIZE_KB 0)
     message(SEND_ERROR "Unknown FLASH code: ${MCU_FLASH_CODE}")
 endif()
 
-message(STATUS "RAM: ${RAM_SIZE}, FLASH: ${FLASH_SIZE}")
+set(FLASH_SIZE "${FLASH_SIZE_KB}K")
+
+message(STATUS "RAM: ${RAM_SIZE}, CCMRAM: ${CCMRAM_SIZE}, FLASH: ${FLASH_SIZE}")
 
 
 if(NOT DEFINED USER_DATA_SIZE)
@@ -151,6 +126,42 @@ else()
     if(NOT USER_DATA_SIZE MATCHES "^[0-9]+$")
         message(FATAL_ERROR "USER_DATA_SIZE must be a number.")
     endif()
+endif()
+
+# STM32G4 FLASH is erased by pages. The USER_DATA region is placed at the end
+# of FLASH, so it has to consist of whole pages, otherwise erasing the user
+# data would erase application code as well. The page has 2K, on lines with
+# dual bank option (FLASH_OPTR_DBANK - STM32G411xC, G414, G471, G473, G474,
+# G483, G484) the page has 4K in single bank mode (DBANK = 0) - 4K granularity
+# is required there, so the region fits both bank modes.
+if(USER_DATA_SIZE GREATER 0)
+
+    if((MCU_ID STREQUAL "414") OR
+       (MCU_ID STREQUAL "471") OR
+       (MCU_ID STREQUAL "473") OR
+       (MCU_ID STREQUAL "474") OR
+       (MCU_ID STREQUAL "483") OR
+       (MCU_ID STREQUAL "484") OR
+       ((MCU_ID STREQUAL "411") AND
+        (MCU_FLASH_CODE STREQUAL "C"))    )
+        set(FLASH_PAGE_SIZE 4096)
+    else()
+        set(FLASH_PAGE_SIZE 2048)
+    endif()
+
+    math(EXPR FLASH_SIZE_BYTES       "${FLASH_SIZE_KB} * 1024")
+    math(EXPR USER_DATA_PAGE_REM     "${USER_DATA_SIZE} % ${FLASH_PAGE_SIZE}")
+
+    if(NOT USER_DATA_PAGE_REM EQUAL 0)
+        message(FATAL_ERROR "USER_DATA_SIZE (${USER_DATA_SIZE}) must be a multiple "
+                            "of the FLASH page size (${FLASH_PAGE_SIZE}).")
+    endif()
+
+    if(NOT USER_DATA_SIZE LESS FLASH_SIZE_BYTES)
+        message(FATAL_ERROR "USER_DATA_SIZE (${USER_DATA_SIZE}) must be smaller "
+                            "than FLASH size (${FLASH_SIZE_BYTES}).")
+    endif()
+
 endif()
 
 

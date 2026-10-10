@@ -1,6 +1,6 @@
 /*******************************************************************************
 **
-** @file        : STM32G4xx_Linker.ld.in
+** @file        : Linker.ld.in
 **
 ** @author      : Eifell
 **
@@ -195,7 +195,7 @@ SECTIONS
   } >RAM
 
 
-    /* Data not initialized by StartUp - content is kept over system reset
+  /* Data not initialized by StartUp - content is kept over system reset
    * (eg. result mailbox of integration test firmware) */
   .noinit (NOLOAD) :
   {
@@ -206,7 +206,27 @@ SECTIONS
   } >RAM
 
 
-  /* User_heap_stack section, used to check that there is enough "RAM" Ram  type memory left */
+  /* Application interrupt vector table located in RAM. Content is written
+   * at runtime by NVIC module (Nvic_Init), nothing is loaded from FLASH.
+   * Placed before the heap / stack reservation - the stack grows down from
+   * the end of RAM and must not reach the table. */
+  ._irqVectorTable_RAM (NOLOAD) :
+  {
+      /* VTOR requires alignment to power of two >= (count of exceptions x 4),
+       * STM32G4 table has up to 472 bytes */
+      . = ALIGN(512);
+      _irqVectorTable_RAM_Start = .;
+
+      KEEP( *(._irqVectorTable_RAM))
+      KEEP( *(._irqVectorTable_RAM*))
+
+      _irqVectorTable_RAM_End = .;
+  } >RAM
+
+
+  /* User_heap_stack section, used to check that there is enough "RAM" Ram
+   * type memory left. It has to stay the last section in RAM - heap starts
+   * here and the stack grows down from the end of RAM (_estack). */
   ._user_heap_stack :
   {
     . = ALIGN(8);
@@ -216,22 +236,21 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM
-  
-  
-    /* Application interrupt vector table located in RAM. Content is written
-     * at runtime by NVIC module (Nvic_Init), nothing is loaded from FLASH. */
-  ._irqVectorTable_RAM (NOLOAD) :
+
+
+  /* Data placed into CCM SRAM (10K / 16K / 20K / 32K according to the
+   * STM32G4 line, at 0x10000000). CCM SRAM is connected to the instruction
+   * and data bus, the same memory is aliased right after SRAM2 - it is not
+   * part of RAM region. Content is not initialized by StartUp. */
+  .ccmram (NOLOAD) :
   {
-      /* VTOR requires alignment to power of two >= (count of exceptions x 4),
-       * STM32G4 table has up to 472 bytes */
-      . = ALIGN(512);
-      _irqVectorTable_RAM_Start = .;
-      
-      KEEP( *(._irqVectorTable_RAM))
-      KEEP( *(._irqVectorTable_RAM*))
-      
-      _irqVectorTable_RAM_End = .;
-  } >RAM
+    . = ALIGN(4);
+    _sccmram = .;
+    *(.ccmram)
+    *(.ccmram*)
+    . = ALIGN(4);
+    _eccmram = .;
+  } >CCMRAM
 
 
   /* Remove information from the compiler libraries */
