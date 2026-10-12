@@ -1,17 +1,17 @@
 /*******************************************************************************
 **
-** @file        : STM32G4xx_Linker.ld.in
+** @file        : Linker.ld.in
 **
 ** @author      : Eifell
 **
-** @brief       : Linker script for STM32G4xx Device from STM32G4 series
+** @brief       : Linker script for STM32H7xx Device from STM32H7 series
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
 **
 **                Set memory bank area and size if external memory is used
 **
-**  Target      : STMicroelectronics STM32G4 family
+**  Target      : STMicroelectronics STM32H7 family
 **
 **  Distribution: The file is distributed as is, without any warranty
 **                of any kind.
@@ -29,27 +29,57 @@
 /* Entry Point */
 ENTRY(StartUp_Handler)
 
-/* Memories definition */
+/* Memories definition
+ * RAM is the AXI SRAM (D1 / CD domain) - accessible by the CPU and by all DMA
+ * controllers. DTCMRAM / ITCMRAM are accessible by the CPU (and MDMA) only.
+ * RAM_D2 is the AHB SRAM of D2 / CD domain, RAM_D3 the SRAM of D3 / SRD domain
+ * (the only RAM accessible by BDMA). FLASH is bank 1, FLASH2 is bank 2 when the
+ * banks are not contiguous (1M dual-bank devices), dual-core devices use bank 1
+ * only. */
 MEMORY
 {
-  RAM      (xrw) : ORIGIN = 0x20000000,                    LENGTH = @RAM_SIZE@
-  RAM4     (xrw) : ORIGIN = 0x28000000,                    LENGTH = 16K
-  BKRAM    (xrw) : ORIGIN = 0x10000000,                    LENGTH = 2K
+  RAM      (xrw) : ORIGIN = 0x24000000,                    LENGTH = @RAM_SIZE@
+  DTCMRAM  (xrw) : ORIGIN = 0x20000000,                    LENGTH = @DTCMRAM_SIZE@
+  ITCMRAM  (xrw) : ORIGIN = 0x00000000,                    LENGTH = @ITCMRAM_SIZE@
+  RAM_D2   (xrw) : ORIGIN = 0x30000000,                    LENGTH = @RAM_D2_SIZE@
+  RAM_D3   (xrw) : ORIGIN = 0x38000000,                    LENGTH = @RAM_D3_SIZE@
+  BKPSRAM   (rw) : ORIGIN = 0x38800000,                    LENGTH = @BKPSRAM_SIZE@
   FLASH     (rx) : ORIGIN = 0x08000000,                    LENGTH = @FLASH_SIZE@ - @USER_DATA_SIZE@
   USER_DATA (rx) : ORIGIN = ORIGIN(FLASH) + LENGTH(FLASH), LENGTH = @USER_DATA_SIZE@
+  FLASH2    (rx) : ORIGIN = 0x08100000,                    LENGTH = @FLASH2_SIZE@
 }
 
 _ram_start  = ORIGIN(RAM);
 _ram_length = LENGTH(RAM);
 _ram_end    = ORIGIN(RAM) + LENGTH(RAM);
 
-_ram4_start  = ORIGIN(RAM4);
-_ram4_length = LENGTH(RAM4);
-_ram4_end    = ORIGIN(RAM4) + LENGTH(RAM4);
+_dtcmram_start  = ORIGIN(DTCMRAM);
+_dtcmram_length = LENGTH(DTCMRAM);
+_dtcmram_end    = ORIGIN(DTCMRAM) + LENGTH(DTCMRAM);
+
+_itcmram_start  = ORIGIN(ITCMRAM);
+_itcmram_length = LENGTH(ITCMRAM);
+_itcmram_end    = ORIGIN(ITCMRAM) + LENGTH(ITCMRAM);
+
+_ram_d2_start  = ORIGIN(RAM_D2);
+_ram_d2_length = LENGTH(RAM_D2);
+_ram_d2_end    = ORIGIN(RAM_D2) + LENGTH(RAM_D2);
+
+_ram_d3_start  = ORIGIN(RAM_D3);
+_ram_d3_length = LENGTH(RAM_D3);
+_ram_d3_end    = ORIGIN(RAM_D3) + LENGTH(RAM_D3);
+
+_bkpsram_start  = ORIGIN(BKPSRAM);
+_bkpsram_length = LENGTH(BKPSRAM);
+_bkpsram_end    = ORIGIN(BKPSRAM) + LENGTH(BKPSRAM);
 
 _flash_start  = ORIGIN(FLASH);
 _flash_length = LENGTH(FLASH);
 _flash_end    = ORIGIN(FLASH) + LENGTH(FLASH);
+
+_flash2_start  = ORIGIN(FLASH2);
+_flash2_length = LENGTH(FLASH2);
+_flash2_end    = ORIGIN(FLASH2) + LENGTH(FLASH2);
 
 
 /* Highest address of the user mode stack */
@@ -61,7 +91,7 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 
 /* Sections */
 SECTIONS
-{  
+{
   /* The startup code into "FLASH" Rom type memory */
   .isr_vector (READONLY) :
   {
@@ -87,7 +117,7 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
-  
+
 
   /* Constant data into "FLASH" Rom type memory */
   .rodata :
@@ -97,8 +127,8 @@ SECTIONS
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
   } >FLASH
-  
-  
+
+
   /* Location of user data */
   .user_data_flash ( NOLOAD ):
   {
@@ -110,7 +140,7 @@ SECTIONS
   } >USER_DATA
 
 
-  .ARM.extab : 
+  .ARM.extab :
   {
     . = ALIGN(4);
     *(.ARM.extab* .gnu.linkonce.armextab.*)
@@ -118,7 +148,7 @@ SECTIONS
   } >FLASH
 
 
-  .ARM : 
+  .ARM :
   {
     . = ALIGN(4);
     __exidx_start = .;
@@ -217,8 +247,8 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM
-  
-  
+
+
     /* Application interrupt vector table located in RAM. Content is written
      * at runtime by NVIC module (Nvic_Init), nothing is loaded from FLASH. */
   ._irqVectorTable_RAM (NOLOAD) :
@@ -227,12 +257,80 @@ SECTIONS
        * STM32H7 table has up to 716 bytes (STM32H723/H725/H730/H733/H735) */
       . = ALIGN(1024);
       _irqVectorTable_RAM_Start = .;
-      
+
       KEEP( *(._irqVectorTable_RAM))
       KEEP( *(._irqVectorTable_RAM*))
-      
+
       _irqVectorTable_RAM_End = .;
   } >RAM
+
+
+  /* Data placed into DTCM (128K, 64K on STM32H7R/S) - zero wait state RAM of
+   * the CPU, not accessible by DMA1 / DMA2 / BDMA. Content is not initialized
+   * by StartUp. */
+  .dtcmram (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _sdtcmram = .;
+    *(.dtcmram)
+    *(.dtcmram*)
+    . = ALIGN(4);
+    _edtcmram = .;
+  } >DTCMRAM
+
+
+  /* Data placed into the AHB SRAM of D2 / CD domain (DMA1 / DMA2 buffers of
+   * D2 peripherals, Ethernet descriptors, ...). Content is not initialized by
+   * StartUp. */
+  .ram_d2 (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _sram_d2 = .;
+    *(.ram_d2)
+    *(.ram_d2*)
+    . = ALIGN(4);
+    _eram_d2 = .;
+  } >RAM_D2
+
+
+  /* Data placed into the SRAM of D3 / SRD domain - the only RAM accessible by
+   * BDMA (not available on STM32H7R/S). Content is not initialized by StartUp. */
+  .ram_d3 (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _sram_d3 = .;
+    *(.ram_d3)
+    *(.ram_d3*)
+    . = ALIGN(4);
+    _eram_d3 = .;
+  } >RAM_D3
+
+
+  /* Data placed into Backup SRAM (4K, battery backed when VBAT is supplied).
+   * BKPSRAM clock and backup domain write access have to be enabled before
+   * use. Content is not initialized by StartUp. */
+  .bkpsram (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _sbkpsram = .;
+    *(.bkpsram)
+    *(.bkpsram*)
+    . = ALIGN(4);
+    _ebkpsram = .;
+  } >BKPSRAM
+
+
+  /* Constant data placed into FLASH bank 2 of 1M dual-bank devices (bank 2 is
+   * not contiguous with bank 1) */
+  .flash2 (READONLY) :
+  {
+    . = ALIGN(4);
+    _sflash2 = .;
+    KEEP(*(.flash2))
+    KEEP(*(.flash2*))
+    . = ALIGN(4);
+    _eflash2 = .;
+  } >FLASH2
 
 
   /* Remove information from the compiler libraries */
