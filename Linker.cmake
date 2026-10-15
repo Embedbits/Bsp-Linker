@@ -89,8 +89,10 @@ elseif((MCU_ID STREQUAL "496") OR
     set(RAM_SIZE "320K")
     
 elseif((MCU_ID STREQUAL "4R5") OR 
+       (MCU_ID STREQUAL "4R7") OR 
        (MCU_ID STREQUAL "4R9") OR 
        (MCU_ID STREQUAL "4S5") OR
+       (MCU_ID STREQUAL "4S7") OR
        (MCU_ID STREQUAL "4S9")    )
 
     set(RAM_SIZE "640K")
