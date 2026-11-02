@@ -1,17 +1,17 @@
 /*******************************************************************************
 **
-** @file        : STM32G4xx_Linker.ld.in
+** @file        : Linker.ld.in
 **
 ** @author      : Eifell
 **
-** @brief       : Linker script for STM32G4xx Device from STM32G4 series
+** @brief       : Linker script for STM32H5xx Device from STM32H5 series
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
 **
 **                Set memory bank area and size if external memory is used
 **
-**  Target      : STMicroelectronics STM32G4 family
+**  Target      : STMicroelectronics STM32H5 family
 **
 **  Distribution: The file is distributed as is, without any warranty
 **                of any kind.
