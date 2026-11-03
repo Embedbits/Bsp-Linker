@@ -112,7 +112,7 @@ These symbols are used by the startup code to:
 
 ## Integration
 
-The linker file script is generated from STM32G4xx_Linker.ld.in by CMake and depends on configured STM32 MCU.
+The linker file script is generated from `Linker.ld.in` by CMake and depends on configured STM32 MCU.
 
 Ensure your compiler and linker flags allow usage of these symbols in your C code, typically via:
 
